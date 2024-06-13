@@ -118,7 +118,7 @@ namespace AQCert.Services
             var dnsTxt = _acme.AccountKey.DnsTxt(dnsChallenge.Token);
             Console.WriteLine($"正在添加{domain}记录...");
             await CloudflareAPIManager.Instance.AddOrUpdateTxtRecord(domain.Replace("*.", ""), "_acme-challenge", dnsTxt);
-            Console.WriteLine($"CF记录添加完成，等待60秒开始验证");
+            Console.WriteLine($"Cloudflare记录添加完成，等待60秒开始验证");
             await Task.Delay(60 * 1000); //TTL
 
             //TODO 先本地验证？
@@ -126,11 +126,11 @@ namespace AQCert.Services
             do
             {
                 await Task.Delay(5 * 1000);
-                Console.WriteLine($"正在验证TXT记录...");
+                Console.WriteLine($"正在本地验证DNSTXT记录...");
             } while (await DomainUtils.GetTxtRecords($"_acme-challenge.{domain.Replace("*.", "")}", "8.8.8.8") != dnsTxt);
 
 
-            Console.WriteLine($"本地检测成功，提交验证...");
+            Console.WriteLine($"本地验证DNS成功，提交CA验证...");
             var v = await dnsChallenge.Validate();
             Console.WriteLine(v.Status.ToString());
             await Task.Delay(10 * 1000);
@@ -155,7 +155,7 @@ namespace AQCert.Services
             } while (validateResult.Status != ChallengeStatus.Valid);
 
 
-            Console.WriteLine($"验证成功");
+            Console.WriteLine($"CA验证成功");
             await Task.Delay(3000);
 
             var privateKey = KeyFactory.NewKey(KeyAlgorithm.RS256);
@@ -165,7 +165,7 @@ namespace AQCert.Services
                 CommonName = domain,
             }, privateKey);
 
-            Console.WriteLine($"等待签发...");
+            Console.WriteLine($"等待签发证书...");
             if (order.Status == OrderStatus.Processing)
             {
                 var attempts = 10;
@@ -189,7 +189,7 @@ namespace AQCert.Services
                 throw new Exception("Error#1");
             }
 
-            Console.WriteLine($"已签发");
+            Console.WriteLine($"已签发证书");
             CertificateChain certificateChain = await orderContext.Download();
 
             var privateKeyPem = privateKey.ToPem();

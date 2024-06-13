@@ -85,7 +85,8 @@ namespace AQCert
                     {
                         if ((DateTime.Now - _certTimes[domain]).TotalDays < 7)
                         {
-                            Console.WriteLine($"[{domain}]上次成功时间不足7天，不重新申请");
+                            var lastSuccessTime = _certTimes[domain].ToString("yyyy-MM-dd HH:mm:ss");
+                            Console.WriteLine($"[{domain}]上次成功时间[{lastSuccessTime}]不足7天，不重新申请");
                             continue;
                         }
                     }
@@ -117,7 +118,7 @@ namespace AQCert
                         }
                     }
                 }
-
+                Console.WriteLine($"等待下次检查...");
                 //每小时检查一次
                 await Task.Delay(1000 * 60 * 60);
             }

@@ -16,7 +16,7 @@ namespace AQCert.Services
         private const string BaseUrl = "https://api.cloudflare.com/client/v4";
 
 
-        public static string APIKey = Environment.GetEnvironmentVariable("CFKEY");
+        public static string APIKey = Environment.GetEnvironmentVariable("CLOUDFLARE_KEY");
 
 
         private CloudflareAPIManager()
