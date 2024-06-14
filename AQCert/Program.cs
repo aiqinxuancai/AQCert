@@ -1,11 +1,8 @@
 ﻿
-using System.Runtime.ConstrainedExecution;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
+
 using Newtonsoft.Json;
 using AQCert.Services;
 using AQCert.Models;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 
 namespace AQCert
@@ -18,15 +15,19 @@ namespace AQCert
 
         private static string kConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "config");
 
-#if DEBUG
         private static string kCertPath = Path.Combine(Directory.GetCurrentDirectory(), "cert");
-#else
-        private static string kCertPath = "/cert";
-#endif
+
         private static string kAccountPath = Path.Combine(Directory.GetCurrentDirectory(), "account");
 
         static void Main(string[] args)
         {
+            bool isDocker = File.Exists("/.dockerenv");
+            if (isDocker)
+            {
+                Console.WriteLine("当前运行于Docker");
+                kCertPath = "/cert";
+            }
+
             if (!Directory.Exists(kConfigPath))
             {
                 Directory.CreateDirectory(kConfigPath);
@@ -46,6 +47,9 @@ namespace AQCert
         static async Task MainAsync(string[] args)
         {
             Console.WriteLine("AQCert");
+
+            bool isDocker = File.Exists("/.dockerenv");
+
 #if DEBUG
             var cfKey = File.ReadAllText("CLOUDFLARE_KEY.txt");
             var acmeMail = File.ReadAllText("ACME_MAIL.txt");
@@ -55,6 +59,18 @@ namespace AQCert
             var acmeMail = Environment.GetEnvironmentVariable("ACME_MAIL");
             var domains = Environment.GetEnvironmentVariable("DOMAINS");
 #endif
+
+            if (!isDocker && string.IsNullOrWhiteSpace(cfKey))
+            {
+                //从命令行中读取并将其添加到一个dict中，以供读取 命令行例子：--CLOUDFLARE_KEY=你的CFKEY --ACME_MAIL=你的ACME_MAIL
+                Dictionary<string, string> parameters = ParseCommandLineArgs(args);
+
+                parameters.TryGetValue("CLOUDFLARE_KEY", out cfKey);
+                parameters.TryGetValue("ACME_MAIL", out acmeMail);
+                parameters.TryGetValue("DOMAINS", out domains);
+            }
+
+            //Console.WriteLine($"{cfKey} {acmeMail} {domains}");
 
 
             if (string.IsNullOrWhiteSpace(cfKey)) 
@@ -97,14 +113,17 @@ namespace AQCert
             };
 #else
     
+
             //指定为letsencrypt
             var caModel = new CAModel()
             {
                 Name = "CA_LETSENCRYPT_V2",
-                Url = "https://acme-v02.api.letsencrypt.org/directory", //"https://acme.zerossl.com/v2/DV90",
+                Url = "https://acme-staging-v02.api.letsencrypt.org/directory", //Url = "https://acme-v02.api.letsencrypt.org/directory", 
                 EabId = null,
                 EabKey = null
             };
+
+            //"https://acme.zerossl.com/v2/DV90",
 #endif
 
 
@@ -168,6 +187,25 @@ namespace AQCert
         private static void SaveCertTime()
         {
             File.WriteAllText(kCertTimeFile, JsonConvert.SerializeObject(_certTimes, Formatting.None));
+        }
+
+        private static Dictionary<string, string> ParseCommandLineArgs(string[] args)
+        {
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+
+            foreach (string arg in args)
+            {
+                if (arg.StartsWith("--"))
+                {
+                    string[] splitArg = arg.Substring(2).Split('=');
+                    if (splitArg.Length == 2)
+                    {
+                        parameters[splitArg[0]] = splitArg[1];
+                    }
+                }
+            }
+
+            return parameters;
         }
     }
 }
