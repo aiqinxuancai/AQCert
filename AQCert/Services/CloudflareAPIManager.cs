@@ -16,7 +16,7 @@ namespace AQCert.Services
         private const string BaseUrl = "https://api.cloudflare.com/client/v4";
 
 
-        public static string APIKey = Environment.GetEnvironmentVariable("CLOUDFLARE_KEY");
+        public static string APIKey = AppConfig.CloudflareKey;
 
 
         private CloudflareAPIManager()
@@ -58,7 +58,7 @@ namespace AQCert.Services
             return string.Empty;
         }
 
-        public async Task<string> GetZonesDnsRecordId(string zoneId, string recordName)
+        public async Task<List<string>> GetZonesDnsRecordId(string zoneId, string recordName)
         {
             var responseContent =
                 await BaseUrl
@@ -74,14 +74,34 @@ namespace AQCert.Services
                 throw new Exception("Failed to get zone ID");
             }
 
-            var obj = responseObject["result"].FirstOrDefault(a => ((string)a["name"]).StartsWith($"{recordName}."));
-            if (obj == null)
+            
+            var results = new List<string>();
+            foreach (var item in responseObject["result"])
             {
-                return string.Empty;
+                string zoneName = (string)item["zone_name"];
+
+                if (((string)item["name"]).Replace($".{zoneName}", "") == recordName)
+                {
+                    results.Add((string)item["id"]);
+                }
             }
 
-            return (string)obj["id"];
+            return results;
         }
+
+        public async Task<bool> DeleteRecord(string zoneId, string recordId)
+        {
+
+            var response = await BaseUrl
+                        .AppendPathSegment($"zones/{zoneId}/dns_records/{recordId}")
+                        .OnError(async a => { Debug.WriteLine(await a.Response.GetStringAsync()); })
+                        .DeleteAsync();
+
+            var result = await response.GetStringAsync();
+
+            return true;
+        }
+
 
 
         public async Task<bool> AddOrUpdateTxtRecord(string domain, string recordName, string content)
@@ -94,47 +114,36 @@ namespace AQCert.Services
                 return false;
             }
 
-            var recordId = await GetZonesDnsRecordId(zoneId, recordName);
+            var recordIds = await GetZonesDnsRecordId(zoneId, recordName);
 
             var json = new JObject(
                 new JProperty("type", "TXT"),
                 new JProperty("name", recordName),
-                new JProperty("content", content)
+                new JProperty("content", content),
+                new JProperty("ttl", 60)
             );
 
             var jsonStr = json.ToString();
 
-            if (string.IsNullOrEmpty(recordId))
+            foreach (var item in recordIds)
             {
-                //Add
-                var response = await BaseUrl
-                                    .AppendPathSegment($"zones/{zoneId}/dns_records")
-                                    .OnError(async a => { Debug.WriteLine(await a.Response.GetStringAsync()); })
-                                    .PostStringAsync(jsonStr);
-
-                var result = await response.GetStringAsync();
-
-
-                if (response.StatusCode != 200)
-                {
-                    Console.WriteLine("Failed to add TXT record");
-                    return false;
-                }
+                await DeleteRecord(zoneId, item);
             }
-            else
-            {
-                //Update 
-                var response =
-                    await BaseUrl
-                        .AppendPathSegment($"zones/{zoneId}/dns_records/{recordId}")
-                        .OnError(async a => { Debug.WriteLine(await a.Response.GetStringAsync()); })
-                        .PatchStringAsync(jsonStr);
 
-                if (response.StatusCode != 200)
-                {
-                    Console.WriteLine("Failed to update TXT record");
-                    return false;
-                }
+
+            //Add
+            var response = await BaseUrl
+                                .AppendPathSegment($"zones/{zoneId}/dns_records")
+                                .OnError(async a => { Debug.WriteLine(await a.Response.GetStringAsync()); })
+                                .PostStringAsync(jsonStr);
+
+            var result = await response.GetStringAsync();
+
+
+            if (response.StatusCode != 200)
+            {
+                Console.WriteLine("Failed to add TXT record");
+                return false;
             }
 
 

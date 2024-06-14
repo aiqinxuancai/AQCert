@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 using AQCert.Services;
 using AQCert.Models;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 
 namespace AQCert
@@ -13,20 +14,48 @@ namespace AQCert
     {
         private static Dictionary<string, DateTime> _certTimes = new Dictionary<string, DateTime>();
 
-        private const string kCertTimePath = "/config/certtimes.json";
+        private static string kCertTimeFile = Path.Combine(Directory.GetCurrentDirectory(), "config", "certtimes.json");
+
+        private static string kConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "config");
+
+#if DEBUG
+        private static string kCertPath = Path.Combine(Directory.GetCurrentDirectory(), "cert");
+#else
+        private static string kCertPath = "/cert";
+#endif
+        private static string kAccountPath = Path.Combine(Directory.GetCurrentDirectory(), "account");
 
         static void Main(string[] args)
         {
+            if (!Directory.Exists(kConfigPath))
+            {
+                Directory.CreateDirectory(kConfigPath);
+            }
+            if (!Directory.Exists(kCertPath))
+            {
+                Directory.CreateDirectory(kCertPath);
+            }
+            if (!Directory.Exists(kAccountPath))
+            {
+                Directory.CreateDirectory(kAccountPath);
+            }
+
             MainAsync(args).GetAwaiter().GetResult();
         }
 
         static async Task MainAsync(string[] args)
         {
             Console.WriteLine("AQCert");
-
-            var cfKey = Environment.GetEnvironmentVariable("CFKEY");
+#if DEBUG
+            var cfKey = File.ReadAllText("CLOUDFLARE_KEY.txt");
+            var acmeMail = File.ReadAllText("ACME_MAIL.txt");
+            var domains = File.ReadAllText("DOMAINS.txt");
+#else
+            var cfKey = Environment.GetEnvironmentVariable("CLOUDFLARE_KEY");
             var acmeMail = Environment.GetEnvironmentVariable("ACME_MAIL");
             var domains = Environment.GetEnvironmentVariable("DOMAINS");
+#endif
+
 
             if (string.IsNullOrWhiteSpace(cfKey)) 
             {
@@ -45,13 +74,30 @@ namespace AQCert
                 return;
             }
 
+            AppConfig.CloudflareKey = cfKey;
+            AppConfig.Domains = domains;
+            AppConfig.AcmeMail = acmeMail;
+
+
             var domainArray = domains.Split(',');
 
 
             Console.WriteLine($"为{domains}申请证书...");
             Console.WriteLine(acmeMail);
 
-            //指定为
+
+#if DEBUG
+            //指定为letsencrypt
+            var caModel = new CAModel()
+            {
+                Name = "CA_LETSENCRYPT_V2_TEST",
+                Url = "https://acme-staging-v02.api.letsencrypt.org/directory",
+                EabId = null,
+                EabKey = null
+            };
+#else
+    
+            //指定为letsencrypt
             var caModel = new CAModel()
             {
                 Name = "CA_LETSENCRYPT_V2",
@@ -59,19 +105,12 @@ namespace AQCert
                 EabId = null,
                 EabKey = null
             };
+#endif
 
-            if (!Directory.Exists("/config"))
-            {
-                Directory.CreateDirectory("/config");
-            }
-            if (!Directory.Exists("/cert"))
-            {
-                Directory.CreateDirectory("/cert");
-            }
 
-            if (File.Exists(kCertTimePath))
+            if (File.Exists(kCertTimeFile))
             {
-                _certTimes = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(File.ReadAllText(kCertTimePath));
+                _certTimes = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(File.ReadAllText(kCertTimeFile));
             }
            
 
@@ -104,8 +143,10 @@ namespace AQCert
 
                                 //证书写出到/cert
 
-                                File.WriteAllText($"/cert/{domain.Replace("*.", "")}.pem", cert.pem);
-                                File.WriteAllText($"/cert/{domain.Replace("*.", "")}.key", cert.privateKey);
+                                var domainName = domain.Replace("*.", "");
+
+                                File.WriteAllText(Path.Combine(kCertPath, $"{domainName}.pem")  , cert.pem);
+                                File.WriteAllText(Path.Combine(kCertPath, $"{domainName}.key"), cert.privateKey);
 
                                 SaveCertTime();
                                 break;
@@ -126,7 +167,7 @@ namespace AQCert
 
         private static void SaveCertTime()
         {
-            File.WriteAllText(kCertTimePath, JsonConvert.SerializeObject(_certTimes, Formatting.None));
+            File.WriteAllText(kCertTimeFile, JsonConvert.SerializeObject(_certTimes, Formatting.None));
         }
     }
 }

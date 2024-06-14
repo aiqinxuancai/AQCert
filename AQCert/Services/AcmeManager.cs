@@ -10,9 +10,9 @@ namespace AQCert.Services
     internal class AcmeManager
     {
 
-        private const string kAccountPath = "/account";
+        private const string kAccountPath = @"account";
 
-        private string _email = Environment.GetEnvironmentVariable("ACME_MAIL");
+        private string _email = AppConfig.AcmeMail;
         private AcmeContext _acme = null;
         private IAccountContext _account = null;
         private static readonly Lazy<AcmeManager> lazy = new Lazy<AcmeManager>(() => new AcmeManager());
@@ -37,7 +37,7 @@ namespace AQCert.Services
 
             try
             {
-                var acmeUri = new Uri("https://acme-v02.api.letsencrypt.org/directory");
+                var acmeUri = new Uri(model.Url);
 
                 if (!string.IsNullOrEmpty(model.Url))
                 {
@@ -48,7 +48,9 @@ namespace AQCert.Services
 
                 if (File.Exists(pemPath))
                 {
-                    var accountKey = KeyFactory.FromPem(File.ReadAllText(pemPath));
+                    Console.WriteLine("从本地读取账号...");
+                    var pem = File.ReadAllText(pemPath);
+                    var accountKey = KeyFactory.FromPem(pem);
                     var acme = new AcmeContext(acmeUri, accountKey);
                     var account = await acme.Account();
 
@@ -57,6 +59,7 @@ namespace AQCert.Services
                 }
                 else
                 {
+                    Console.WriteLine("申请新的账号...");
                     var acme = new AcmeContext(acmeUri);
                     var account = await acme.NewAccount(_email, true, model.EabId, model.EabKey);
                     var pemKey = acme.AccountKey.ToPem();
@@ -117,42 +120,75 @@ namespace AQCert.Services
             var dnsChallenge = await authz.Dns();
             var dnsTxt = _acme.AccountKey.DnsTxt(dnsChallenge.Token);
             Console.WriteLine($"正在添加{domain}记录...");
-            await CloudflareAPIManager.Instance.AddOrUpdateTxtRecord(domain.Replace("*.", ""), "_acme-challenge", dnsTxt);
-            Console.WriteLine($"Cloudflare记录添加完成，等待60秒开始验证");
-            await Task.Delay(60 * 1000); //TTL
 
-            //TODO 先本地验证？
+
+            var mainDomain = DomainUtils.ExtractTopLevelDomain(domain);
+            var txtDomain = "_acme-challenge." + domain.Replace("*.", "").Replace($".{mainDomain}", "");
+         
+
+            var addRecordResult = await CloudflareAPIManager.Instance.AddOrUpdateTxtRecord(domain.Replace("*.", ""), txtDomain, dnsTxt);
+            
+            
+            if (!addRecordResult)
+            {
+                throw new Exception("添加Cloudflare解析失败！");
+            }
+            Console.WriteLine($"Cloudflare记录添加完成，等待20秒开始验证");
+            await Task.Delay(10 * 1000); //TTL
 
             do
             {
-                await Task.Delay(5 * 1000);
+                await Task.Delay(10 * 1000);
                 Console.WriteLine($"正在本地验证DNSTXT记录...");
-            } while (await DomainUtils.GetTxtRecords($"_acme-challenge.{domain.Replace("*.", "")}", "8.8.8.8") != dnsTxt);
-
-
+            } while (!await DomainUtils.AuthTxtRecords($"{txtDomain}.{mainDomain}", "8.8.8.8", dnsTxt));
+            
+            Console.WriteLine($"本地验证完成");
+            await Task.Delay(5 * 1000);
             Console.WriteLine($"本地验证DNS成功，提交CA验证...");
             var v = await dnsChallenge.Validate();
             Console.WriteLine(v.Status.ToString());
-            await Task.Delay(10 * 1000);
 
-            do
+            if (v.Status != ChallengeStatus.Valid)
             {
-                try
-                {
-                    validateResult = await dnsChallenge.Resource();
-                    Console.WriteLine(validateResult.Status.ToString());
-                    if (validateResult.Status == ChallengeStatus.Valid)
-                    {
-                        break;
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-                await Task.Delay(1000 * 60);
+                //CA未直接验证成功
+                await Task.Delay(10 * 1000);
 
-            } while (validateResult.Status != ChallengeStatus.Valid);
+                var errorCount = 0;
+                do
+                {
+                    try
+                    {
+                        validateResult = await dnsChallenge.Resource();
+                        Console.WriteLine("结果：" + validateResult.Status.ToString());
+                        if (validateResult.Status == ChallengeStatus.Valid)
+                        {
+                            break;
+                        }
+                        else if (validateResult.Status == ChallengeStatus.Invalid)
+                        {
+                            errorCount++;
+                            if (errorCount > 20)
+                            {
+                                errorCount = 0;
+                                //重新提交一次验证
+                                Console.WriteLine("重新提交验证...");
+                                var reValidate = await dnsChallenge.Validate();
+                                Console.WriteLine(reValidate.Status.ToString());
+                            }
+
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+
+                    await Task.Delay(1000 * 10);
+
+                } while (validateResult.Status != ChallengeStatus.Valid);
+            }
+
+            
 
 
             Console.WriteLine($"CA验证成功");
