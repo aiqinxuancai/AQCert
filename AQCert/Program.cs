@@ -112,13 +112,11 @@ namespace AQCert
                 EabKey = null
             };
 #else
-    
-
             //指定为letsencrypt
             var caModel = new CAModel()
             {
                 Name = "CA_LETSENCRYPT_V2",
-                Url = "https://acme-staging-v02.api.letsencrypt.org/directory", //Url = "https://acme-v02.api.letsencrypt.org/directory", 
+                Url = "https://acme-v02.api.letsencrypt.org/directory", 
                 EabId = null,
                 EabKey = null
             };
