@@ -3,6 +3,7 @@ using Flurl;
 using Flurl.Http;
 using System.Diagnostics;
 using Aliyun.AutoCdnSsl.Utils;
+using System.Text.RegularExpressions;
 
 namespace AQCert.Services
 {
@@ -148,6 +149,155 @@ namespace AQCert.Services
 
 
             return true;
+        }
+
+        /// <summary>
+        /// 更新A记录
+        /// </summary>
+        /// <param name="domain"></param>
+        /// <param name="recordName"></param>
+        /// <param name="ipAddress"></param>
+        /// <returns></returns>
+        public async Task<bool> AddOrUpdateARecord(string domain, string recordName, string ipAddress)
+        {
+            var zoneId = await GetZoneId(domain);
+
+            if (string.IsNullOrWhiteSpace(zoneId))
+            {
+                return false;
+            }
+
+            var recordIds = await GetZonesDnsRecordId(zoneId, recordName);
+
+            var json = new JObject(
+                new JProperty("type", "A"),
+                new JProperty("name", recordName),
+                new JProperty("content", ipAddress),
+                new JProperty("ttl", 1) // 使用自动 TTL
+            );
+
+            var jsonStr = json.ToString();
+
+            if (recordIds.Count > 0)
+            {
+                // 更新现有记录
+                foreach (var recordId in recordIds)
+                {
+                    var response = await BaseUrl
+                        .AppendPathSegment($"zones/{zoneId}/dns_records/{recordId}")
+                        .OnError(async a => { Debug.WriteLine(await a.Response.GetStringAsync()); })
+                        .PutStringAsync(jsonStr);
+
+                    var result = await response.GetStringAsync();
+
+                    if (response.StatusCode != 200)
+                    {
+                        Console.WriteLine($"Failed to update A record: {recordId}");
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                // 添加新记录
+                var response = await BaseUrl
+                    .AppendPathSegment($"zones/{zoneId}/dns_records")
+                    .OnError(async a => { Debug.WriteLine(await a.Response.GetStringAsync()); })
+                    .PostStringAsync(jsonStr);
+
+                var result = await response.GetStringAsync();
+
+                if (response.StatusCode != 200)
+                {
+                    Console.WriteLine("Failed to add A record");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public async Task<bool> AddOrUpdateARecord(string fullDomain, string ipAddress)
+        {
+            var (recordName, rootDomain) = SplitDomain(fullDomain);
+
+            var zoneId = await GetZoneId(rootDomain);
+
+            if (string.IsNullOrWhiteSpace(zoneId))
+            {
+                return false;
+            }
+
+            var recordIds = await GetZonesDnsRecordId(zoneId, recordName);
+
+            var json = new JObject(
+                new JProperty("type", "A"),
+                new JProperty("name", recordName),
+                new JProperty("content", ipAddress),
+                new JProperty("ttl", 1) // 使用自动 TTL
+            );
+
+            var jsonStr = json.ToString();
+
+            if (recordIds.Count > 0)
+            {
+                // 更新现有记录
+                foreach (var recordId in recordIds)
+                {
+                    var response = await BaseUrl
+                        .AppendPathSegment($"zones/{zoneId}/dns_records/{recordId}")
+                        .OnError(async a => { Debug.WriteLine(await a.Response.GetStringAsync()); })
+                        .PutStringAsync(jsonStr);
+
+                    var result = await response.GetStringAsync();
+
+                    if (response.StatusCode != 200)
+                    {
+                        Console.WriteLine($"Failed to update A record: {recordId}");
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                // 添加新记录
+                var response = await BaseUrl
+                    .AppendPathSegment($"zones/{zoneId}/dns_records")
+                    .OnError(async a => { Debug.WriteLine(await a.Response.GetStringAsync()); })
+                    .PostStringAsync(jsonStr);
+
+                var result = await response.GetStringAsync();
+
+                if (response.StatusCode != 200)
+                {
+                    Console.WriteLine("Failed to add A record");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private (string RecordName, string RootDomain) SplitDomain(string fullDomain)
+        {
+            var parts = fullDomain.Split('.');
+            if (parts.Length < 3)
+            {
+                // 如果域名部分少于3，则认为整个字符串是根域名
+                return ("@", fullDomain);
+            }
+
+            var tld = string.Join(".", parts.TakeLast(2));
+            var match = Regex.Match(fullDomain, @"(.+)\." + Regex.Escape(tld) + "$");
+
+            if (match.Success)
+            {
+                var recordName = match.Groups[1].Value;
+                return (recordName, tld);
+            }
+
+            // 如果无法正确拆分，返回默认值
+            return ("@", fullDomain);
         }
     }
 }
