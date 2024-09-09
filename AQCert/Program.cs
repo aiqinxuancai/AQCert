@@ -26,6 +26,7 @@ namespace AQCert
             {
                 Console.WriteLine("当前运行于Docker");
                 kCertPath = "/cert";
+                kCertTimeFile = "/config/certtimes.json";
             }
 
             if (!Directory.Exists(kConfigPath))
@@ -177,6 +178,7 @@ namespace AQCert
                         {
                             Console.WriteLine($"[{domain}]申请失败");
                             Console.WriteLine(ex);
+                            SaveCertTime();
                         }
                     }
                 }
@@ -188,6 +190,7 @@ namespace AQCert
 
         private static void SaveCertTime()
         {
+            Console.WriteLine($"保存数据到{kCertTimeFile}");
             File.WriteAllText(kCertTimeFile, JsonConvert.SerializeObject(_certTimes, Formatting.None));
         }
 
