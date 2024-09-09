@@ -48,6 +48,9 @@ namespace AQCert
         {
             Console.WriteLine("AQCert");
 
+            Console.WriteLine($"现在时间：{DateTime.Now}");
+            Console.WriteLine($"现在时间UTC：{DateTime.UtcNow}");
+
             bool isDocker = File.Exists("/.dockerenv");
 
 #if DEBUG
