@@ -11,9 +11,7 @@ namespace AQCert
     {
         private static Dictionary<string, DateTime> _certTimes = new Dictionary<string, DateTime>();
 
-        private static string kCertTimeFile = Path.Combine(Directory.GetCurrentDirectory(), "config", "certtimes.json");
-
-        private static string kConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "config");
+        private static string kCertTimeFile = Path.Combine(Directory.GetCurrentDirectory(), "cert", "certtimes.json");
 
         private static string kCertPath = Path.Combine(Directory.GetCurrentDirectory(), "cert");
 
@@ -26,12 +24,7 @@ namespace AQCert
             {
                 Console.WriteLine("当前运行于Docker");
                 kCertPath = "/cert";
-                kCertTimeFile = "/config/certtimes.json";
-            }
-
-            if (!Directory.Exists(kConfigPath))
-            {
-                Directory.CreateDirectory(kConfigPath);
+                kCertTimeFile = "/cert/certtimes.json";
             }
             if (!Directory.Exists(kCertPath))
             {
