@@ -130,6 +130,7 @@ namespace AQCert
 
             if (File.Exists(kCertTimeFile))
             {
+                Console.WriteLine($"已读取本地配置读取");
                 _certTimes = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(File.ReadAllText(kCertTimeFile));
             }
            
@@ -142,10 +143,10 @@ namespace AQCert
                 {
                     if (_certTimes.ContainsKey(domain))
                     {
-                        if ((DateTime.Now - _certTimes[domain]).TotalDays < 7)
+                        if ((DateTime.Now - _certTimes[domain]).TotalDays < 10)
                         {
                             var lastSuccessTime = _certTimes[domain].ToString("yyyy-MM-dd HH:mm:ss");
-                            Console.WriteLine($"[{domain}]上次成功时间[{lastSuccessTime}]不足7天，不重新申请");
+                            Console.WriteLine($"[{domain}]上次成功时间[{lastSuccessTime}]不足10天，不重新申请");
                             continue;
                         }
                     }
