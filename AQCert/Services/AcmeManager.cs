@@ -59,11 +59,11 @@ namespace AQCert.Services
                 }
                 else
                 {
-                    Console.WriteLine("申请新的账号...");
+                    Console.WriteLine($"申请新的账号 {acmeUri} {_email}...");
                     var acme = new AcmeContext(acmeUri);
                     var account = await acme.NewAccount(_email, true, model.EabId, model.EabKey);
                     var pemKey = acme.AccountKey.ToPem();
-
+                    Console.WriteLine($"申请完成，写出到{pemPath}...");
                     File.WriteAllText(pemPath, pemKey);
 
                     _acme = acme;
