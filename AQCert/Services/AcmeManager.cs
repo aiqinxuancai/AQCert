@@ -124,7 +124,10 @@ namespace AQCert.Services
 
             var mainDomain = DomainUtils.ExtractTopLevelDomain(domain);
             var txtDomain = "_acme-challenge." + domain.Replace("*.", "").Replace($".{mainDomain}", "");
-         
+
+
+
+            var deleteSuccess = await CloudflareAPIManager.Instance.DeleteRecordsByName(domain.Replace("*.", ""), txtDomain);
 
             var addRecordResult = await CloudflareAPIManager.Instance.AddOrUpdateTxtRecord(domain.Replace("*.", ""), txtDomain, dnsTxt);
             

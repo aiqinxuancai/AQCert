@@ -51,6 +51,8 @@ namespace AQCert
             var cfKey = File.ReadAllText("CLOUDFLARE_KEY.txt");
             var acmeMail = File.ReadAllText("ACME_MAIL.txt");
             var domains = File.ReadAllText("DOMAINS.txt");
+
+
 #else
             var cfKey = Environment.GetEnvironmentVariable("CLOUDFLARE_KEY");
             var acmeMail = Environment.GetEnvironmentVariable("ACME_MAIL");
