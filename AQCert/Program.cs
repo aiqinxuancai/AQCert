@@ -129,7 +129,11 @@ namespace AQCert
                 Console.WriteLine($"已读取本地配置读取");
                 _certTimes = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(File.ReadAllText(kCertTimeFile));
             }
-           
+
+            if (_certTimes == null)
+            {
+                _certTimes = new Dictionary<string, DateTime>();
+            }
 
             while (true)
             {
@@ -149,7 +153,7 @@ namespace AQCert
 
                     for (int i = 0; i < 3; i++)
                     {
-                        Console.WriteLine($"[{domain}]开始第{i+1}次申请");
+                        Console.WriteLine($"[{domain}]开始第{i + 1}次申请");
                         try
                         {
                             var cert = await AcmeManager.Instance.Order(domain, caModel);
@@ -162,7 +166,7 @@ namespace AQCert
 
                                 var domainName = domain.Replace("*.", "");
 
-                                File.WriteAllText(Path.Combine(kCertPath, $"{domainName}.pem")  , cert.pem);
+                                File.WriteAllText(Path.Combine(kCertPath, $"{domainName}.pem"), cert.pem);
                                 File.WriteAllText(Path.Combine(kCertPath, $"{domainName}.key"), cert.privateKey);
 
                                 SaveCertTime();
