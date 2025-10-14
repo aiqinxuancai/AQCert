@@ -10,7 +10,7 @@ namespace AQCert.Services
     internal class AcmeManager
     {
 
-        private const string kAccountPath = @"account";
+        private static string kAccountPath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), "account");
 
         private string _email = AppConfig.AcmeMail;
         private AcmeContext _acme = null;
