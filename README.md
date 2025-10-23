@@ -18,7 +18,6 @@
 ## 环境要求
 
 - Cloudflare 账号及 API Key
-- .NET 9.0 运行时（Docker 部署无需手动安装）
 
 ## 使用方法
 
