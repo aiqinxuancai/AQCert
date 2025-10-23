@@ -31,23 +31,6 @@ AQCert --CLOUDFLARE_KEY=你的CF_API_KEY --ACME_MAIL=你的邮箱 --DOMAINS=exam
 
 ### 方式二：Docker 运行
 
-#### 单域名示例
-
-```bash
-docker run -d \
-  --name aqcert \
-  --restart unless-stopped \
-  -e CLOUDFLARE_KEY=你的CLOUDFLARE_API_KEY \
-  -e ACME_MAIL=your-email@example.com \
-  -e DOMAINS=example.com \
-  -v /opt/cert:/cert \
-  -v /opt/cert/config:/config \
-  -v /opt/cert/account:/account \
-  aiqinxuancai/aqcert:latest
-```
-
-#### 多域名示例
-
 ```bash
 docker run -d \
   --name aqcert \
@@ -101,43 +84,6 @@ docker-compose logs -f aqcert
 docker-compose down
 ```
 
-#### 高级配置示例
-
-适用于多个独立域名证书申请的场景：
-
-```yaml
-version: '3.8'
-
-services:
-  # 主域名证书
-  aqcert-main:
-    image: aiqinxuancai/aqcert:latest
-    container_name: aqcert-main
-    restart: unless-stopped
-    environment:
-      - CLOUDFLARE_KEY=${CLOUDFLARE_KEY}
-      - ACME_MAIL=${ACME_MAIL}
-      - DOMAINS=example.com,*.example.com
-    volumes:
-      - ./certs/main:/cert
-      - ./config/main:/config
-      - ./account:/account
-
-  # 其他域名证书
-  aqcert-secondary:
-    image: aiqinxuancai/aqcert:latest
-    container_name: aqcert-secondary
-    restart: unless-stopped
-    environment:
-      - CLOUDFLARE_KEY=${CLOUDFLARE_KEY}
-      - ACME_MAIL=${ACME_MAIL}
-      - DOMAINS=another-domain.com,*.another-domain.com
-    volumes:
-      - ./certs/secondary:/cert
-      - ./config/secondary:/config
-      - ./account:/account
-```
-
 配合 `.env` 文件使用：
 
 ```env
@@ -160,8 +106,8 @@ ACME_MAIL=your-email@example.com
 | 容器路径 | 说明 | 建议映射 |
 |----------|------|----------|
 | `/cert` | 证书文件存储目录 | 必须映射 |
-| `/config` | 配置文件目录 | 建议映射 |
-| `/account` | ACME 账户信息 | 建议映射 |
+| `/config` | 配置文件目录 | 必须映射 |
+| `/account` | ACME 账户信息 | 必须映射，否则每次启动都申请新账号 |
 
 ### 获取 Cloudflare API Key
 
@@ -174,16 +120,14 @@ ACME_MAIL=your-email@example.com
 
 证书申请成功后，文件会保存在映射的 `/cert` 目录下：
 
-- `fullchain.pem` - 完整证书链
-- `privkey.pem` - 私钥文件
-- `cert.pem` - 证书文件
-- `chain.pem` - 证书链文件
+- `example.com.pem` - 完整证书链
+- `example.com.key` - 私钥文件
 
 ## 常见问题
 
 ### 1. 证书多久更新一次？
 
-程序会每小时检测一次，当距离上次成功申请超过 7 天时会自动更新证书。
+程序会每小时检测一次，当距离上次成功申请超过 10 天时会自动更新证书。
 
 ### 2. 支持哪些域名格式？
 
