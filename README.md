@@ -15,10 +15,6 @@
 
 程序运行后会每小时自动检测证书状态，当距离上次申请成功时间超过 10 天时，自动执行证书申请流程。适用于需要长期维护证书的场景，如 frpc 等服务的 HTTPS 证书自动更新。
 
-## 环境要求
-
-- Cloudflare 账号及 API Key
-
 ## 使用方法
 
 ### 方式一：直接运行
@@ -90,8 +86,8 @@ docker-compose down
 
 | 变量名 | 必填 | 说明 | 示例 |
 |--------|------|------|------|
-| `CLOUDFLARE_KEY` | 是 | Cloudflare API Key | `your_api_key_here` |
-| `ACME_MAIL` | 是 | Let's Encrypt 注册邮箱 | `admin@example.com` |
+| `CLOUDFLARE_KEY` | 是 | Cloudflare API Key 需包含DNS修改权限 | `your_api_key_here` |
+| `ACME_MAIL` | 是 | 自己的任意邮箱地址 | `admin@example.com` |
 | `DOMAINS` | 是 | 要申请证书的域名，多个域名用逗号分隔 | `example.com,*.example.com` |
 
 ### 数据卷映射
