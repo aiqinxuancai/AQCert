@@ -84,13 +84,6 @@ docker-compose logs -f aqcert
 docker-compose down
 ```
 
-配合 `.env` 文件使用：
-
-```env
-CLOUDFLARE_KEY=你的CLOUDFLARE_API_KEY
-ACME_MAIL=your-email@example.com
-```
-
 ## 配置说明
 
 ### 环境变量
