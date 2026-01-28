@@ -15,5 +15,11 @@ namespace AQCert.Services
         public static string AcmeMail { get; set; }
 
         public static string Domains { get; set; }
+
+        public static string CertPath { get; set; }
+
+        public static string AccountPath { get; set; }
+
+        public static string ConfigPath { get; set; }
     }
 }

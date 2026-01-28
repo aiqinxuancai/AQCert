@@ -10,7 +10,14 @@ namespace AQCert.Services
     internal class AcmeManager
     {
 
-        private static string kAccountPath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), "account");
+        private static string ResolveAccountPath()
+        {
+            if (!string.IsNullOrWhiteSpace(AppConfig.AccountPath))
+            {
+                return AppConfig.AccountPath;
+            }
+            return Path.Combine(System.IO.Directory.GetCurrentDirectory(), "account");
+        }
 
         private string _email = AppConfig.AcmeMail;
         private AcmeContext _acme = null;
@@ -21,9 +28,10 @@ namespace AQCert.Services
 
         private AcmeManager()
         {
-            if (!System.IO.Directory.Exists(kAccountPath))
+            var accountPath = ResolveAccountPath();
+            if (!System.IO.Directory.Exists(accountPath))
             {
-                System.IO.Directory.CreateDirectory(kAccountPath);
+                System.IO.Directory.CreateDirectory(accountPath);
             }
         }
 
@@ -44,7 +52,7 @@ namespace AQCert.Services
                     acmeUri = new Uri(model.Url);
                 }
                 var accountHash = MD5Utils.GetMD5(acmeUri.ToString() + "_" + _email);
-                var pemPath = Path.Combine(kAccountPath, $"{accountHash}.pem");
+                var pemPath = Path.Combine(ResolveAccountPath(), $"{accountHash}.pem");
 
                 if (File.Exists(pemPath))
                 {
@@ -84,7 +92,7 @@ namespace AQCert.Services
 
         private IOrderContext LoadOrder(string domain)
         {
-            var orderPath = Path.Combine(kAccountPath, MD5Utils.GetMD5(domain) + ".order");
+            var orderPath = Path.Combine(ResolveAccountPath(), MD5Utils.GetMD5(domain) + ".order");
             if (File.Exists(orderPath))
             {
                 //存在

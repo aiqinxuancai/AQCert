@@ -1,4 +1,4 @@
-# AQCert
+﻿# AQCert
 
 全自动申请 HTTPS 证书工具，基于 Let's Encrypt 服务，支持通过 Cloudflare DNS 验证域名所有权，自动申请和更新 SSL/TLS 证书。
 
@@ -34,6 +34,9 @@ docker run -d \
   -e CLOUDFLARE_KEY=你的CLOUDFLARE_API_KEY \
   -e ACME_MAIL=your-email@example.com \
   -e DOMAINS=example.com,*.example.com,subdomain.example.com \
+  -e AQCERT_CERT_PATH=/cert \
+  -e AQCERT_ACCOUNT_PATH=/account \
+  -e AQCERT_CONFIG_PATH=/config \
   -v /opt/cert:/cert \
   -v /opt/cert/config:/config \
   -v /opt/cert/account:/account \
@@ -56,6 +59,9 @@ services:
       - CLOUDFLARE_KEY=你的CLOUDFLARE_API_KEY
       - ACME_MAIL=your-email@example.com
       - DOMAINS=example.com,*.example.com
+      - AQCERT_CERT_PATH=/cert
+      - AQCERT_ACCOUNT_PATH=/account
+      - AQCERT_CONFIG_PATH=/config
     volumes:
       - ./cert:/cert
       - ./config:/config
@@ -135,3 +141,5 @@ docker-compose down
 ## 贡献
 
 欢迎提交 Issue 和 Pull Request！
+
+

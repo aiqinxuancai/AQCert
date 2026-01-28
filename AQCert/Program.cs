@@ -11,11 +11,10 @@ namespace AQCert
     {
         private static Dictionary<string, DateTime> _certTimes = new Dictionary<string, DateTime>();
 
-        private static string kCertTimeFile = Path.Combine(Directory.GetCurrentDirectory(), "cert", "certtimes.json");
-
         private static string kCertPath = Path.Combine(Directory.GetCurrentDirectory(), "cert");
-
         private static string kAccountPath = Path.Combine(Directory.GetCurrentDirectory(), "account");
+        private static string kConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "config");
+        private static string kCertTimeFile = Path.Combine(Directory.GetCurrentDirectory(), "cert", "certtimes.json");
 
         static void Main(string[] args)
         {
@@ -24,8 +23,18 @@ namespace AQCert
             {
                 Console.WriteLine("当前运行于Docker");
                 kCertPath = "/cert";
-                kCertTimeFile = "/cert/certtimes.json";
+                kAccountPath = "/account";
+                kConfigPath = "/config";
             }
+
+            kCertPath = GetEnvOrDefault("AQCERT_CERT_PATH", kCertPath);
+            kAccountPath = GetEnvOrDefault("AQCERT_ACCOUNT_PATH", kAccountPath);
+            kConfigPath = GetEnvOrDefault("AQCERT_CONFIG_PATH", kConfigPath);
+            kCertTimeFile = Path.Combine(kCertPath, "certtimes.json");
+
+            AppConfig.CertPath = kCertPath;
+            AppConfig.AccountPath = kAccountPath;
+            AppConfig.ConfigPath = kConfigPath;
             if (!Directory.Exists(kCertPath))
             {
                 Directory.CreateDirectory(kCertPath);
@@ -33,6 +42,10 @@ namespace AQCert
             if (!Directory.Exists(kAccountPath))
             {
                 Directory.CreateDirectory(kAccountPath);
+            }
+            if (!Directory.Exists(kConfigPath))
+            {
+                Directory.CreateDirectory(kConfigPath);
             }
 
             MainAsync(args).GetAwaiter().GetResult();
@@ -191,6 +204,12 @@ namespace AQCert
         {
             Console.WriteLine($"保存数据到{kCertTimeFile}");
             File.WriteAllText(kCertTimeFile, JsonConvert.SerializeObject(_certTimes, Formatting.None));
+        }
+
+        private static string GetEnvOrDefault(string key, string defaultValue)
+        {
+            var value = Environment.GetEnvironmentVariable(key);
+            return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
         }
 
         private static Dictionary<string, string> ParseCommandLineArgs(string[] args)
