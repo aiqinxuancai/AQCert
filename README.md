@@ -95,6 +95,9 @@ docker-compose down
 | `CLOUDFLARE_KEY` | 是 | Cloudflare API Key 需包含DNS修改权限 | `your_api_key_here` |
 | `ACME_MAIL` | 是 | 自己的任意邮箱地址 | `admin@example.com` |
 | `DOMAINS` | 是 | 要申请证书的域名，多个域名用逗号分隔 | `example.com,*.example.com` |
+| `AQCERT_CERT_PATH` | 否 | 证书输出目录（覆盖默认路径） | `/cert` |
+| `AQCERT_ACCOUNT_PATH` | 否 | ACME 账户目录（覆盖默认路径） | `/account` |
+| `AQCERT_CONFIG_PATH` | 否 | 配置目录（覆盖默认路径） | `/config` |
 
 ### 数据卷映射
 
