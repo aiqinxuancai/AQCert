@@ -11,10 +11,10 @@ namespace AQCert
     {
         private static Dictionary<string, DateTime> _certTimes = new Dictionary<string, DateTime>();
 
-        private static string kCertPath = Path.Combine(Directory.GetCurrentDirectory(), "cert");
-        private static string kAccountPath = Path.Combine(Directory.GetCurrentDirectory(), "account");
-        private static string kConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "config");
-        private static string kCertTimeFile = Path.Combine(Directory.GetCurrentDirectory(), "cert", "certtimes.json");
+        private static string kCertPath = Path.Combine(AppContext.BaseDirectory, "cert");
+        private static string kConfigPath = Path.Combine(AppContext.BaseDirectory, "config");
+        private static string kAccountPath = Path.Combine(kConfigPath, "account");
+        private static string kCertTimeFile = Path.Combine(kCertPath, "certtimes.json");
 
         static void Main(string[] args)
         {
@@ -23,13 +23,12 @@ namespace AQCert
             {
                 Console.WriteLine("当前运行于Docker");
                 kCertPath = "/cert";
-                kAccountPath = "/account";
                 kConfigPath = "/config";
             }
 
             kCertPath = GetEnvOrDefault("AQCERT_CERT_PATH", kCertPath);
-            kAccountPath = GetEnvOrDefault("AQCERT_ACCOUNT_PATH", kAccountPath);
             kConfigPath = GetEnvOrDefault("AQCERT_CONFIG_PATH", kConfigPath);
+            kAccountPath = GetEnvOrDefault("AQCERT_ACCOUNT_PATH", Path.Combine(kConfigPath, "account"));
             kCertTimeFile = Path.Combine(kCertPath, "certtimes.json");
 
             AppConfig.CertPath = kCertPath;

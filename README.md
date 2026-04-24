@@ -1,148 +1,69 @@
-﻿# AQCert
+# AQCert
 
-全自动申请 HTTPS 证书工具，基于 Let's Encrypt 服务，支持通过 Cloudflare DNS 验证域名所有权，自动申请和更新 SSL/TLS 证书。
+基于 Let's Encrypt + Cloudflare DNS 的全自动 SSL 证书申请 & 续期工具。每小时检测一次，证书申请成功 10 天后自动触发续期。
 
-## 功能特点
+## 快速开始
 
-- 🔒 自动申请 Let's Encrypt 免费证书
-- 🌐 支持通过 Cloudflare DNS API 验证域名
-- 🔄 自动定时检测和更新证书
-- 📦 支持多域名和通配符域名申请
-- 🐳 提供 Docker 容器化部署
-- 💾 证书自动保存到本地文件
-
-## 工作原理
-
-程序运行后会每小时自动检测证书状态，当距离上次申请成功时间超过 10 天时，自动执行证书申请流程。适用于需要长期维护证书的场景，如 frpc 等服务的 HTTPS 证书自动更新。
-
-## 使用方法
-
-### 方式一：直接运行
-
-编译后执行程序并传入参数：
+**直接运行**
 
 ```bash
-AQCert --CLOUDFLARE_KEY=你的CF_API_KEY --ACME_MAIL=你的邮箱 --DOMAINS=example.com,*.example.com
+AQCert --CLOUDFLARE_KEY=<API_KEY> --ACME_MAIL=<EMAIL> --DOMAINS=example.com,*.example.com
 ```
 
-### 方式二：Docker 运行
+**Docker**
 
 ```bash
 docker run -d \
   --name aqcert \
   --restart unless-stopped \
-  -e CLOUDFLARE_KEY=你的CLOUDFLARE_API_KEY \
-  -e ACME_MAIL=your-email@example.com \
-  -e DOMAINS=example.com,*.example.com,subdomain.example.com \
-  -e AQCERT_CERT_PATH=/cert \
-  -e AQCERT_ACCOUNT_PATH=/account \
-  -e AQCERT_CONFIG_PATH=/config \
+  -e CLOUDFLARE_KEY=<API_KEY> \
+  -e ACME_MAIL=<EMAIL> \
+  -e DOMAINS=example.com,*.example.com \
   -v /opt/cert:/cert \
   -v /opt/cert/config:/config \
-  -v /opt/cert/account:/account \
   aiqinxuancai/aqcert:latest
 ```
 
-### 方式三：Docker Compose 部署
-
-创建 `docker-compose.yml` 文件：
+**Docker Compose**
 
 ```yaml
-version: '3.8'
-
 services:
   aqcert:
     image: aiqinxuancai/aqcert:latest
     container_name: aqcert
     restart: unless-stopped
     environment:
-      - CLOUDFLARE_KEY=你的CLOUDFLARE_API_KEY
-      - ACME_MAIL=your-email@example.com
+      - CLOUDFLARE_KEY=<API_KEY>
+      - ACME_MAIL=<EMAIL>
       - DOMAINS=example.com,*.example.com
-      - AQCERT_CERT_PATH=/cert
-      - AQCERT_ACCOUNT_PATH=/account
-      - AQCERT_CONFIG_PATH=/config
     volumes:
       - ./cert:/cert
       - ./config:/config
-      - ./account:/account
 ```
 
-启动服务：
-
-```bash
-docker-compose up -d
-```
-
-查看日志：
-
-```bash
-docker-compose logs -f aqcert
-```
-
-停止服务：
-
-```bash
-docker-compose down
-```
-
-## 配置说明
+## 配置
 
 ### 环境变量
 
-| 变量名 | 必填 | 说明 | 示例 |
-|--------|------|------|------|
-| `CLOUDFLARE_KEY` | 是 | Cloudflare API Key 需包含DNS修改权限 | `your_api_key_here` |
-| `ACME_MAIL` | 是 | 自己的任意邮箱地址 | `admin@example.com` |
-| `DOMAINS` | 是 | 要申请证书的域名，多个域名用逗号分隔 | `example.com,*.example.com` |
-| `AQCERT_CERT_PATH` | 否 | 证书输出目录（覆盖默认路径） | `/cert` |
-| `AQCERT_ACCOUNT_PATH` | 否 | ACME 账户目录（覆盖默认路径） | `/account` |
-| `AQCERT_CONFIG_PATH` | 否 | 配置目录（覆盖默认路径） | `/config` |
+| 变量 | 必填 | 说明 |
+|------|:----:|------|
+| `CLOUDFLARE_KEY` | ✅ | Cloudflare API Key（需含 DNS 编辑权限） |
+| `ACME_MAIL` | ✅ | 注册 ACME 账户的邮箱 |
+| `DOMAINS` | ✅ | 域名列表，逗号分隔，支持通配符 |
+| `AQCERT_CERT_PATH` | ➖ | 证书输出目录（默认 `/cert`） |
+| `AQCERT_CONFIG_PATH` | ➖ | 配置目录（默认 `/config`） |
+| `AQCERT_ACCOUNT_PATH` | ➖ | ACME 账户目录（默认 `/config/account`） |
 
-### 数据卷映射
+### 数据卷
 
-| 容器路径 | 说明 | 建议映射 |
-|----------|------|----------|
-| `/cert` | 证书文件存储目录 | 必须映射 |
-| `/config` | 配置文件目录 | 必须映射 |
-| `/account` | ACME 账户信息 | 必须映射，否则每次启动都申请新账号 |
+| 路径 | 说明 |
+|------|------|
+| `/cert` | 证书输出（`domain.pem` + `domain.key`） |
+| `/config` | 配置文件和 ACME 账户信息（默认 `/config/account`），务必持久化 |
 
-### 获取 Cloudflare API Key
-
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. 进入 "My Profile" → "API Tokens"
-3. 创建 Token 或使用 Global API Key
-4. 确保 Token 具有 DNS 编辑权限
-
-## 证书文件位置
-
-证书申请成功后，文件会保存在映射的 `/cert` 目录下：
-
-- `example.com.pem` - 完整证书链
-- `example.com.key` - 私钥文件
-
-## 常见问题
-
-### 1. 证书多久更新一次？
-
-程序会每小时检测一次，当距离上次成功申请超过 10 天时会自动更新证书。
-
-### 2. 支持哪些域名格式？
-
-- 单域名：`example.com`
-- 通配符域名：`*.example.com`
-- 多域名组合：`example.com,*.example.com,sub.example.com`
-
-### 3. 是否支持其他 DNS 提供商？
-
-目前仅支持 Cloudflare DNS API 验证。
+> **获取 Cloudflare API Key**：[Cloudflare Dashboard](https://dash.cloudflare.com/) → My Profile → API Tokens，创建具有 DNS 编辑权限的 Token。
 
 ## 许可证
 
-本项目使用开源许可证，详见 LICENSE 文件。
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
+MIT · 欢迎提交 Issue / PR
 

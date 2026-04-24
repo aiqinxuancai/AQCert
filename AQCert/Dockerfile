@@ -33,8 +33,8 @@ ENV CLOUDFLARE_KEY=${CLOUDFLARE_KEY} \
     ACME_MAIL=${ACME_MAIL} \
     DOMAINS=${DOMAINS}
 
-# 将 /cert 目录挂载到容器外部
-VOLUME ["/cert", "/config", "/account"]
+# 将证书和配置目录挂载到容器外部，ACME 账号默认保存在 /config/account
+VOLUME ["/cert", "/config"]
 
 # 设置启动命令
 ENTRYPOINT ["dotnet", "AQCert.dll"]

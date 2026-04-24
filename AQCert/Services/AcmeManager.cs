@@ -16,7 +16,11 @@ namespace AQCert.Services
             {
                 return AppConfig.AccountPath;
             }
-            return Path.Combine(System.IO.Directory.GetCurrentDirectory(), "account");
+            if (!string.IsNullOrWhiteSpace(AppConfig.ConfigPath))
+            {
+                return Path.Combine(AppConfig.ConfigPath, "account");
+            }
+            return Path.Combine(AppContext.BaseDirectory, "config", "account");
         }
 
         private string _email = AppConfig.AcmeMail;
