@@ -148,14 +148,13 @@ namespace AQCert.Services
             {
                 throw new Exception("添加Cloudflare解析失败！");
             }
-            Console.WriteLine($"Cloudflare记录添加完成，等待20秒开始验证");
-            await Task.Delay(10 * 1000); //TTL
-
-            do
-            {
-                await Task.Delay(10 * 1000);
-                Console.WriteLine($"正在本地验证DNSTXT记录...");
-            } while (!await DomainUtils.AuthTxtRecords($"{txtDomain}.{mainDomain}", "8.8.8.8", dnsTxt));
+            var dnsValidationTimeout = TimeSpan.FromMinutes(5);
+            Console.WriteLine($"Cloudflare记录添加完成，开始验证DNS传播（最长{dnsValidationTimeout.TotalMinutes:0}分钟）");
+            await DomainUtils.WaitForTxtRecordAsync(
+                $"{txtDomain}.{mainDomain}",
+                dnsTxt,
+                dnsValidationTimeout,
+                TimeSpan.FromSeconds(10));
             
             Console.WriteLine($"本地验证完成");
             await Task.Delay(5 * 1000);
